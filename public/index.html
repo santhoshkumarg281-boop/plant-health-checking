@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlantCare AI - AI Plant Health & Care Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Google Fonts for multilingual typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Kannada:wght@400;600;700&family=Noto+Sans+Malayalam:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="app-wrapper">
+    
+    <!-- Clean Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <!-- Logo & Branding -->
+        <div class="brand-link" id="brandHomeLink" onclick="window.plantCareApp.switchView('home')">
+          <img src="assets/logo.svg" alt="PlantCare AI Logo" class="brand-logo" />
+          <span class="brand-title">
+            PlantCare <span class="ai-badge">AI</span>
+          </span>
+        </div>
+
+        <!-- Top Right Actions: Home, Language Selector, AI Settings -->
+        <div class="header-actions">
+          <button type="button" class="nav-link-btn" id="navHomeBtn" data-i18n="homeBtn">Home</button>
+          
+          <!-- 5-Language Selector -->
+          <div class="lang-selector-wrap">
+            <select id="langSelect" class="lang-select" aria-label="Select Language">
+              <option value="en">🇬🇧 English</option>
+              <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
+              <option value="hi">🇮🇳 हिन्दी (Hindi)</option>
+              <option value="ml">🇮🇳 മലയാളം (Malayalam)</option>
+              <option value="kn">🇮🇳 ಕನ್ನಡ (Kannada)</option>
+            </select>
+            <span class="lang-arrow">▼</span>
+          </div>
+
+          <button type="button" class="icon-btn" id="settingsBtn" title="AI Settings">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic Application Container -->
+    <main class="main-content">
+      <div class="container">
+
+        <!-- ===================================================
+             1. HOME VIEW
+             =================================================== -->
+        <section id="view-home" class="view-section">
+          <div class="hero-banner">
+            <div class="hero-badge">
+              <span>🌱 Plant + 🤖 AI</span>
+            </div>
+            <h1 class="hero-title">
+              PlantCare <span class="gradient-text">AI</span>
+            </h1>
+            <p class="hero-tagline" data-i18n="tagline">
+              Take a photo. Understand your plant. Care smarter.
+            </p>
+          </div>
+
+          <!-- TWO Clearly Separated Main Features -->
+          <div class="features-grid">
+            <!-- Feature 1: Scan Your Plant -->
+            <div class="feature-action-card card-scan" id="homeScanCard">
+              <div class="feature-icon-wrapper">
+                📸
+              </div>
+              <h2 class="feature-title" data-i18n="scanCardTitle">SCAN YOUR PLANT</h2>
+              <p class="feature-desc" data-i18n="scanCardDesc">
+                Take or upload a photo of any plant or leaf for instant health assessment & care advice.
+              </p>
+              <button type="button" class="btn-primary" data-i18n="scanCardBtn">
+                Start Plant Scan 📸
+              </button>
+            </div>
+
+            <!-- Feature 2: Enter Your Plant Name -->
+            <div class="feature-action-card card-name" id="homeNameCard">
+              <div class="feature-icon-wrapper">
+                🌱
+              </div>
+              <h2 class="feature-title" data-i18n="nameCardTitle">ENTER YOUR PLANT NAME</h2>
+              <p class="feature-desc" data-i18n="nameCardDesc">
+                Type any plant name to discover best planting seasons, climate needs, and growing advice.
+              </p>
+              <button type="button" class="btn-primary btn-accent" data-i18n="nameCardBtn">
+                Explore Plant Care 🌱
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================
+             2. SCAN YOUR PLANT VIEW
+             =================================================== -->
+        <section id="view-scan" class="view-section hidden">
+          <div class="view-container">
+            <div class="view-header">
+              <h2 class="view-title" data-i18n="scanTitle">Scan & Diagnose Your Plant</h2>
+              <p class="view-subtitle" data-i18n="scanSubtitle">
+                Upload a clear photo of your plant or leaf for real-time AI botanical analysis.
+              </p>
+            </div>
+
+            <!-- Drop & Upload Zone -->
+            <div class="upload-card" id="dropZone">
+              <div class="upload-icon">🌿📸</div>
+              <p class="upload-primary-text" data-i18n="uploadBoxText">
+                Drag & drop your plant photo here, or click to browse
+              </p>
+              <p class="upload-sub-text" data-i18n="uploadFormats">
+                Supports JPG, PNG, WEBP • Max 15MB
+              </p>
+              <div class="upload-btn-row">
+                <button type="button" class="btn-primary" id="browseBtn" data-i18n="takePhotoBtn">
+                  📸 Take / Upload Photo
+                </button>
+                <input type="file" id="fileInput" accept="image/*" class="hidden" />
+                <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" />
+              </div>
+            </div>
+
+            <!-- Photo Preview Card -->
+            <div class="preview-box hidden" id="previewContainer">
+              <h3 class="care-card-title" data-i18n="previewTitle">Selected Photo Preview</h3>
+              <div class="preview-media">
+                <img id="previewImg" src="" alt="Selected plant preview" />
+              </div>
+              <div class="preview-actions">
+                <button type="button" class="btn-secondary" id="changePhotoBtn" data-i18n="changePhotoBtn">
+                  🔄 Change Photo
+                </button>
+                <button type="button" class="btn-secondary" id="removePhotoBtn" data-i18n="removePhotoBtn">
+                  🗑️ Remove
+                </button>
+                <button type="button" class="btn-primary" id="startAnalyzeBtn" data-i18n="analyzeBtn">
+                  ✨ Analyze Plant Health
+                </button>
+              </div>
+            </div>
+
+            <!-- Instant Sample Presets for Quick Testing -->
+            <div class="sample-section">
+              <h4 class="sample-heading" data-i18n="orTrySample">Or test with instant sample plants:</h4>
+              <div class="sample-grid" id="sampleGrid">
+                <!-- Dynamically populated sample cards -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================
+             3. BEAUTIFUL AI ANALYZING / LOADING SCREEN
+             =================================================== -->
+        <section id="view-analyzing" class="view-section hidden">
+          <div class="view-container">
+            <div class="analyzing-box">
+              <div class="scanner-core">
+                <div class="scanner-ring"></div>
+                <div class="scanner-pulse"></div>
+                <div class="scanner-icon">🌱🤖</div>
+              </div>
+              <h2 class="view-title" data-i18n="analyzingTitle">PlantCare AI is Examining...</h2>
+              <p class="view-subtitle" data-i18n="analyzingSub">
+                Analyzing leaf pigment, cellular patterns, and identifying botanical condition
+              </p>
+              
+              <div class="progress-track">
+                <div class="progress-bar" id="scanProgressBar"></div>
+              </div>
+              <p class="scan-step-label" id="scanStepText">Detecting plant morphology...</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================
+             4. PLANT HEALTH REPORT, CARE PLAN & ASK AI CHAT
+             =================================================== -->
+        <section id="view-report" class="view-section hidden">
+          <div class="view-container report-container">
+            
+            <!-- Plant Health Report Card -->
+            <div class="card-panel">
+              <div class="report-header-grid">
+                <div class="report-media-wrap">
+                  <img id="reportPlantImg" src="" alt="Analyzed Plant" />
+                </div>
+                <div class="report-meta">
+                  <h2 class="report-plant-title" id="reportPlantName">Plant Name</h2>
+                  <span class="report-botanical-sub" id="reportBotanicalName">(Botanical Name)</span>
+                  
+                  <div class="badge-row">
+                    <span class="status-pill status-healthy" id="reportHealthBadge">
+                      ✅ Healthy
+                    </span>
+                    <span class="confidence-pill" id="reportConfidenceBadge">
+                      📊 AI Confidence: 95%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Diagnostic Details -->
+              <div class="diag-grid">
+                <div class="diag-item">
+                  <div class="diag-label">
+                    <span>🔍</span> <span data-i18n="symptomsLabel">Visible Symptoms</span>
+                  </div>
+                  <p class="diag-value" id="reportSymptoms">Loading...</p>
+                </div>
+                <div class="diag-item">
+                  <div class="diag-label">
+                    <span>🦠</span> <span data-i18n="diseaseLabel">Possible Condition / Issue</span>
+                  </div>
+                  <p class="diag-value" id="reportDisease">Loading...</p>
+                </div>
+              </div>
+
+              <!-- Summary & Disclaimer -->
+              <div class="diag-explanation">
+                <div class="diag-label">
+                  <span>📝</span> <span data-i18n="explanationLabel">AI Analysis Summary</span>
+                </div>
+                <p class="diag-value" id="reportExplanation">Loading summary...</p>
+              </div>
+
+              <div class="disclaimer-banner" id="reportDisclaimer">
+                ⚠️ Assessment Disclaimer: This is an AI-assisted evaluation based on visible imagery and should not replace certified agricultural or botanical laboratory diagnosis.
+              </div>
+            </div>
+
+            <!-- Personalized Care Plan Card -->
+            <div class="card-panel">
+              <div class="view-header" style="text-align: left; margin-bottom: 1rem;">
+                <h3 class="view-title" data-i18n="carePlanTitle">💡 Personalized Care Plan</h3>
+                <p class="view-subtitle" data-i18n="carePlanSubtitle">
+                  Tailored daily & weekly recommendations to help your plant thrive
+                </p>
+              </div>
+
+              <div class="care-grid">
+                <!-- 💧 Watering -->
+                <div class="care-card">
+                  <div class="care-icon-badge">💧</div>
+                  <h4 class="care-card-title" data-i18n="wateringAdviceLabel">Watering Advice</h4>
+                  <p class="care-card-text" id="careWatering">Loading advice...</p>
+                </div>
+
+                <!-- ☀️ Sunlight -->
+                <div class="care-card">
+                  <div class="care-icon-badge">☀️</div>
+                  <h4 class="care-card-title" data-i18n="sunlightAdviceLabel">Sunlight Advice</h4>
+                  <p class="care-card-text" id="careSunlight">Loading advice...</p>
+                </div>
+
+                <!-- 🌱 Soil & Nutrition -->
+                <div class="care-card">
+                  <div class="care-icon-badge">🌱</div>
+                  <h4 class="care-card-title" data-i18n="soilAdviceLabel">Soil & Nutrition Advice</h4>
+                  <p class="care-card-text" id="careSoil">Loading advice...</p>
+                </div>
+
+                <!-- ✂️ Basic Care Tips -->
+                <div class="care-card">
+                  <div class="care-icon-badge">✂️</div>
+                  <h4 class="care-card-title" data-i18n="careTipsLabel">Basic Plant Care Tips</h4>
+                  <p class="care-card-text" id="careTips">Loading advice...</p>
+                </div>
+              </div>
+
+              <div style="margin-top: 1.75rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" class="btn-primary" id="reportScanAnotherBtn" data-i18n="scanAnotherBtn" style="width: auto;">
+                  📸 Scan Another Plant
+                </button>
+                <button type="button" class="btn-secondary" id="reportBackHomeBtn" data-i18n="backToHome">
+                  Back to Home
+                </button>
+              </div>
+            </div>
+
+            <!-- Ask PlantCare AI (Contextual Chat Assistant) -->
+            <div class="chat-panel" id="chat-section">
+              <div class="view-header" style="text-align: left; margin-bottom: 1rem;">
+                <h3 class="view-title" data-i18n="chatSectionTitle">💬 Ask PlantCare AI</h3>
+                <p class="view-subtitle" data-i18n="chatSectionSubtitle">
+                  Chat with your AI assistant about this plant's recovery, fertilizer, or growth.
+                </p>
+              </div>
+
+              <div class="chat-context-bar" id="chatContextBadge">
+                Chatting about: Plant
+              </div>
+
+              <!-- Message History -->
+              <div class="chat-messages" id="chatMessages">
+                <!-- Messages populated dynamically -->
+              </div>
+
+              <!-- Suggested Questions Chips -->
+              <div class="suggested-qs-section">
+                <span class="suggested-qs-title" data-i18n="suggestedQuestionsTitle">Suggested Questions:</span>
+                <div class="sq-chips-wrap" id="suggestedQuestionsContainer">
+                  <!-- Chips populated dynamically in active language -->
+                </div>
+              </div>
+
+              <!-- Chat Input Bar -->
+              <div class="chat-input-bar">
+                <input type="text" id="chatInput" data-i18n-placeholder="chatPlaceholder" placeholder="Ask anything about this plant (e.g. watering schedule, pest remedy)..." />
+                <button type="button" class="btn-primary" id="chatSendBtn" data-i18n="chatSendBtn">
+                  Send
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ===================================================
+             5. ENTER YOUR PLANT NAME VIEW
+             =================================================== -->
+        <section id="view-plant-name-search" class="view-section hidden">
+          <div class="view-container">
+            <div class="view-header">
+              <h2 class="view-title" data-i18n="plantNameViewTitle">Plant Encyclopedia & Seasonal Guide</h2>
+              <p class="view-subtitle" data-i18n="plantNamePrompt">
+                What plant do you have?
+              </p>
+            </div>
+
+            <div class="search-box-card">
+              <div class="search-input-group">
+                <input type="text" id="plantNameInput" data-i18n-placeholder="plantNamePlaceholder" placeholder="e.g. Monstera, Tulsi, Tomato, Rose, Snake Plant, Neem..." />
+                <button type="button" class="btn-primary btn-accent" id="searchPlantSubmitBtn" data-i18n="searchPlantBtn" style="width: auto;">
+                  Get Growing Guide ✨
+                </button>
+              </div>
+
+              <div>
+                <p class="sample-heading" style="text-align: left; font-size: 0.9rem;" data-i18n="popularPlantsLabel">
+                  Quick search popular plants:
+                </p>
+                <div class="popular-chips-group" id="popularChipsContainer">
+                  <!-- Chips populated in active language -->
+                </div>
+              </div>
+
+              <div style="margin-top: 1.5rem; text-align: center;">
+                <button type="button" class="btn-secondary" id="plantNameBackHomeBtn" data-i18n="backToHome">
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================
+             6. PLANT NAME RESULT & SEASONAL GUIDE
+             =================================================== -->
+        <section id="view-plant-name-result" class="view-section hidden">
+          <div class="view-container">
+            <div class="card-panel">
+              <div class="view-header" style="text-align: left; margin-bottom: 1.5rem;">
+                <h2 class="view-title" id="resPlantName">Plant Name</h2>
+                <span class="report-botanical-sub" id="resBotanicalName">(Botanical Name)</span>
+              </div>
+
+              <div class="season-grid">
+                <!-- 📅 Best Planting Season -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>📅</span> <span data-i18n="seasonTitle">Best Planting Season</span>
+                  </div>
+                  <p class="season-card-value" id="resSeason">Loading...</p>
+                </div>
+
+                <!-- 🗓️ Best Months -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>🗓️</span> <span data-i18n="monthsTitle">Best Months to Plant</span>
+                  </div>
+                  <p class="season-card-value" id="resMonths">Loading...</p>
+                </div>
+
+                <!-- 🌦️ Suitable Climate -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>🌦️</span> <span data-i18n="climateTitle">Suitable Climate</span>
+                  </div>
+                  <p class="season-card-value" id="resClimate">Loading...</p>
+                </div>
+
+                <!-- ☀️ Sunlight Requirements -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>☀️</span> <span data-i18n="sunlightTitle">Sunlight Requirements</span>
+                  </div>
+                  <p class="season-card-value" id="resSunlight">Loading...</p>
+                </div>
+
+                <!-- 💧 Water Requirements -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>💧</span> <span data-i18n="waterTitle">Water Requirements</span>
+                  </div>
+                  <p class="season-card-value" id="resWater">Loading...</p>
+                </div>
+
+                <!-- 🌱 Growing Tips -->
+                <div class="season-card">
+                  <div class="season-card-title">
+                    <span>🌱</span> <span data-i18n="growingTipsTitle">Basic Growing Tips & Soil</span>
+                  </div>
+                  <p class="season-card-value" id="resGrowingTips">Loading...</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+                <button type="button" class="btn-primary" id="resAskAIBtn" data-i18n="askAboutThisPlantBtn" style="width: auto;">
+                  💬 Ask AI Questions About This Plant
+                </button>
+                <button type="button" class="btn-secondary" id="resSearchAnotherBtn" data-i18n="searchAnotherBtn">
+                  🔍 Search Another Plant
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================
+             7. NON-PLANT DETECTED ERROR VIEW
+             =================================================== -->
+        <section id="view-non-plant-error" class="view-section hidden">
+          <div class="view-container">
+            <div class="error-card">
+              <div class="error-icon">🌱⚠️</div>
+              <h2 class="error-title" data-i18n="nonPlantTitle">Plant Not Detected</h2>
+              <p class="error-msg" id="nonPlantMsg" data-i18n="nonPlantMsg">
+                Our AI vision system could not detect a recognizable plant or leaf in this image. Please upload a clear photo focusing on the plant leaves, stem, or pot.
+              </p>
+              <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <button type="button" class="btn-primary" id="nonPlantTryAgainBtn" data-i18n="tryAgainBtn" style="width: auto;">
+                  Try With A Plant Photo
+                </button>
+                <button type="button" class="btn-secondary" id="nonPlantHomeBtn" data-i18n="backToHome">
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container">
+        <p><strong>PlantCare AI</strong> • <em>Take a photo. Understand your plant. Care smarter.</em></p>
+      </div>
+    </footer>
+
+    <!-- AI Settings Modal -->
+    <div class="modal-overlay hidden" id="settingsModal">
+      <div class="modal-content">
+        <button type="button" class="close-btn" id="closeSettingsBtn">&times;</button>
+        <h3 class="modal-title" data-i18n="settingsTitle">AI Settings</h3>
+        <p class="modal-desc" data-i18n="apiKeyNotice">
+          Optional: Enter your Google Gemini API key for live Gemini 2.5/1.5 Flash Vision. Leave blank to use our built-in botanical AI engine with zero setup.
+        </p>
+        <input type="password" id="apiKeyInput" class="modal-input" data-i18n-placeholder="apiKeyPlaceholder" placeholder="Enter Google Gemini API Key (Optional)" />
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="clearApiKeyBtn" data-i18n="clearApiKey">Clear</button>
+          <button type="button" class="btn-primary" id="saveApiKeyBtn" data-i18n="saveApiKey" style="width: auto;">Save Key</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+  </div>
+
+  <!-- JavaScript Modules -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
