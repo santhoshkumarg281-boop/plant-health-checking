@@ -1,0 +1,21 @@
+{
+  "name": "plantcare-ai",
+  "version": "1.0.0",
+  "description": "PlantCare AI - AI-powered plant health analysis, personalized care plans, and multilingual botanical assistant.",
+  "main": "server.js",
+  "scripts": {
+    "start": "agy-node server.js",
+    "dev": "agy-node server.js"
+  },
+  "keywords": [
+    "plant-care",
+    "plantcare-ai",
+    "ai-botany",
+    "multilingual",
+    "plant-disease-diagnosis",
+    "gemini-vision"
+  ],
+  "author": "PlantCare AI Team",
+  "license": "MIT",
+  "type": "module"
+}
