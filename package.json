@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "agy-node server.js",
-    "dev": "agy-node server.js"
+    "dev": "agy-node server.js",
+    "test": "agy-node --test tests/translations.test.js tests/botanical-engine.test.js tests/api.test.js tests/error-boundary.test.js"
   },
   "keywords": [
     "plant-care",
