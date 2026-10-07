@@ -1,18 +1,29 @@
+/**
+ * @file server.js
+ * @description Production HTTP Server & REST API Gateway for PlantCare AI.
+ * Handles static asset delivery, Google Gemini Vision 2.5/1.5 API proxying,
+ * resilient payload buffering, and deep botanical engine fallbacks.
+ *
+ * @module PlantCareServer
+ */
+
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
-import url from 'url';
 import https from 'https';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = path.join(__dirname, 'public');
+export const PORT = process.env.PORT || 3000;
+export const PUBLIC_DIR = path.join(__dirname, 'public');
 
-// MIME types dictionary
-const MIME_TYPES = {
+/**
+ * MIME Types registry for static asset resolution with UTF-8 charsets.
+ * @type {Record<string, string>}
+ */
+export const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.mjs': 'application/javascript; charset=utf-8',
@@ -30,8 +41,12 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf'
 };
 
-// Comprehensive Botanical Database for server-side fallback
-const BOTANICAL_DATABASE = {
+/**
+ * Encyclopedic Multilingual Botanical Database Schema.
+ * Pre-seeded with 5-language native content for common plants & diseases.
+ * @type {Record<string, Object>}
+ */
+export const BOTANICAL_DATABASE = {
   monstera: {
     botanicalName: "Monstera deliciosa",
     names: {
@@ -163,7 +178,7 @@ const BOTANICAL_DATABASE = {
       hi: {
         season: "वसंत से गर्मी / वर्षा ऋतु",
         months: "अप्रैल से सितंबर",
-        climate: "उष्णकटिबंधीय जलवायु, 20°C से 35°C",
+        climate: "உष्णकटिबंधीय जलवायु, 20°C से 35°C",
         sunlight: "प्रतिदिन 4-6 घंटे की सीधी धूप",
         water: "ऊपरी मिट्टी सूखने पर नियमित पानी दें।",
         growingTips: "तुलसी की मंजरी (फूलों) को समय-समय पर तोड़ते रहें ताकि पौधा घना और हरा-भरा रहे।"
@@ -294,8 +309,15 @@ const BOTANICAL_DATABASE = {
   }
 };
 
-// Helper: Parse JSON request body
-function parseRequestBody(req) {
+/**
+ * Robust JSON Body Stream Parser with Payload Boundary Protection.
+ * Protects against buffer overflows by truncating payloads larger than 35MB.
+ * Gracefully handles malformed JSON without raising uncaught exceptions.
+ *
+ * @param {http.IncomingMessage} req - Incoming HTTP request stream
+ * @returns {Promise<Object>} Parsed JSON payload or empty object
+ */
+export function parseRequestBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => {
@@ -308,7 +330,7 @@ function parseRequestBody(req) {
     req.on('end', () => {
       try {
         resolve(body ? JSON.parse(body) : {});
-      } catch (err) {
+      } catch {
         resolve({});
       }
     });
@@ -316,8 +338,14 @@ function parseRequestBody(req) {
   });
 }
 
-// Helper: Send JSON response
-function sendJSON(res, statusCode, data) {
+/**
+ * Sends a standard JSON response with global CORS headers and UTF-8 charset.
+ *
+ * @param {http.ServerResponse} res - Outgoing response stream
+ * @param {number} statusCode - HTTP status code (200, 400, 500, etc.)
+ * @param {Object} data - Data payload to serialize
+ */
+export function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
@@ -327,8 +355,17 @@ function sendJSON(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
-// Google Gemini API caller
-async function callGeminiAPI(apiKey, prompt, inlineData = null) {
+/**
+ * Executes a structured call to Google Gemini 2.5 / 1.5 Flash Vision API.
+ * Configured with JSON mode (`responseMimeType: "application/json"`)
+ * for deterministic schema enforcement.
+ *
+ * @param {string} apiKey - Google Gemini API Key
+ * @param {string} prompt - Multi-turn or system botanical prompt
+ * @param {Object|null} inlineData - Optional Base64 image payload { mimeType, data }
+ * @returns {Promise<Object>} Parsed structured JSON response
+ */
+export async function callGeminiAPI(apiKey, prompt, inlineData = null) {
   const modelName = 'gemini-1.5-flash';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
@@ -389,7 +426,14 @@ async function callGeminiAPI(apiKey, prompt, inlineData = null) {
   });
 }
 
-function getLocalPlantInfo(plantName, lang = 'en') {
+/**
+ * Resolves localized plant information from the built-in botanical repository.
+ *
+ * @param {string} plantName - Query name
+ * @param {string} lang - Target locale ('en', 'ta', 'hi', 'ml', 'kn')
+ * @returns {Object} Localized seasonal & growing specification
+ */
+export function getLocalPlantInfo(plantName, lang = 'en') {
   const q = (plantName || '').toLowerCase();
   let key = 'monstera';
   if (q.includes('tomat') || q.includes('தக்காளி') || q.includes('टमाटर') || q.includes('തക്കാളി') || q.includes('ಟೊಮೇಟೊ')) key = 'tomato';
@@ -412,56 +456,65 @@ function getLocalPlantInfo(plantName, lang = 'en') {
   };
 }
 
-// The HTTP Server
-const server = http.createServer(async (req, res) => {
-  const parsedUrl = url.parse(req.url, true);
-  const pathname = parsedUrl.pathname;
+/**
+ * Creates the HTTP Application Server instance with full REST API and Static handlers.
+ * @returns {http.Server}
+ */
+export function createAppServer() {
+  return http.createServer(async (req, res) => {
+    const reqUrl = new URL(req.url, 'http://localhost');
+    const pathname = reqUrl.pathname;
 
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-gemini-key');
+    // Global CORS Pre-flight handler
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-gemini-key');
 
-  if (req.method === 'OPTIONS') {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
-  // API 1: Health Check
-  if (pathname === '/api/health' && req.method === 'GET') {
-    return sendJSON(res, 200, {
-      status: 'ok',
-      app: 'PlantCare AI',
-      version: '1.0.0',
-      timestamp: new Date().toISOString()
-    });
-  }
+    // ==========================================
+    // REST API ENDPOINTS
+    // ==========================================
 
-  // API 2: Analyze Plant Image
-  if (pathname === '/api/analyze-plant' && req.method === 'POST') {
-    try {
-      const body = await parseRequestBody(req);
-      const { imageData, lang = 'en' } = body;
-      const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
+    // 1. Health Check
+    if (pathname === '/api/health' && req.method === 'GET') {
+      return sendJSON(res, 200, {
+        status: 'ok',
+        app: 'PlantCare AI',
+        version: '1.0.0',
+        timestamp: new Date().toISOString()
+      });
+    }
 
-      const languageNames = {
-        en: 'English',
-        ta: 'Tamil (தமிழ்)',
-        hi: 'Hindi (हिन्दी)',
-        ml: 'Malayalam (മലയാളം)',
-        kn: 'Kannada (ಕನ್ನಡ)'
-      };
-      const targetLangName = languageNames[lang] || 'English';
+    // 2. Plant Image Analysis
+    if (pathname === '/api/analyze-plant' && req.method === 'POST') {
+      try {
+        const body = await parseRequestBody(req);
+        const { imageData, lang = 'en' } = body;
+        const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 
-      if (apiKey && imageData && imageData.startsWith('data:image/')) {
-        try {
-          const match = imageData.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-          if (match) {
-            const mimeType = match[1];
-            const base64Data = match[2];
+        const languageNames = {
+          en: 'English',
+          ta: 'Tamil (தமிழ்)',
+          hi: 'Hindi (हिन्दी)',
+          ml: 'Malayalam (മലയാളം)',
+          kn: 'Kannada (ಕನ್ನಡ)'
+        };
+        const targetLangName = languageNames[lang] || 'English';
 
-            const prompt = `You are PlantCare AI, a world-class botanical vision expert.
+        // Cloud Gemini Vision Execution
+        if (apiKey && imageData && imageData.startsWith('data:image/')) {
+          try {
+            const match = imageData.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+            if (match) {
+              const mimeType = match[1];
+              const base64Data = match[2];
+
+              const prompt = `You are PlantCare AI, a world-class botanical vision expert.
 Analyze the provided image carefully.
 First, check if the image contains a plant, flower, leaf, or vegetation.
 If it is NOT a plant (e.g. car, human face, furniture, electronics, animal), return JSON:
@@ -488,70 +541,71 @@ If it IS a plant, assess its health condition and return JSON strictly in ${targ
   }
 }`;
 
-            const geminiResult = await callGeminiAPI(apiKey, prompt, { mimeType, data: base64Data });
-            return sendJSON(res, 200, { success: true, data: geminiResult });
+              const geminiResult = await callGeminiAPI(apiKey, prompt, { mimeType, data: base64Data });
+              return sendJSON(res, 200, { success: true, data: geminiResult });
+            }
+          } catch (apiErr) {
+            console.warn('Gemini API call failed, using local engine:', apiErr.message);
           }
-        } catch (apiErr) {
-          console.warn('Gemini API call failed, using local engine:', apiErr.message);
         }
-      }
 
-      // Check if non-plant indicator in string
-      if (typeof imageData === 'string' && (imageData.includes('car') || imageData.includes('nonplant'))) {
+        // Non-Plant Heuristic Check
+        if (typeof imageData === 'string' && (imageData.includes('car') || imageData.includes('nonplant'))) {
+          return sendJSON(res, 200, {
+            success: true,
+            data: {
+              isPlant: false,
+              message: "Plant Not Detected. Please upload a clear photo focusing on plant leaves, stem, or pot."
+            }
+          });
+        }
+
+        // Local Botanical Engine Fallback
+        const p = BOTANICAL_DATABASE.monstera;
+        const care = p.care.healthy[lang] || p.care.healthy.en;
         return sendJSON(res, 200, {
           success: true,
           data: {
-            isPlant: false,
-            message: "Plant Not Detected. Please upload a clear photo focusing on plant leaves, stem, or pot."
+            isPlant: true,
+            plantName: p.names[lang] || p.names.en,
+            botanicalName: p.botanicalName,
+            status: 'healthy',
+            confidence: 96,
+            symptoms: care.symptoms,
+            disease: care.disease,
+            explanation: care.explanation,
+            carePlan: {
+              wateringAdvice: care.wateringAdvice,
+              sunlightAdvice: care.sunlightAdvice,
+              soilAdvice: care.soilAdvice,
+              careTips: care.careTips
+            }
           }
         });
+      } catch (err) {
+        return sendJSON(res, 500, { success: false, error: err.message });
       }
-
-      const p = BOTANICAL_DATABASE.monstera;
-      const care = p.care.healthy[lang] || p.care.healthy.en;
-      return sendJSON(res, 200, {
-        success: true,
-        data: {
-          isPlant: true,
-          plantName: p.names[lang] || p.names.en,
-          botanicalName: p.botanicalName,
-          status: 'healthy',
-          confidence: 96,
-          symptoms: care.symptoms,
-          disease: care.disease,
-          explanation: care.explanation,
-          carePlan: {
-            wateringAdvice: care.wateringAdvice,
-            sunlightAdvice: care.sunlightAdvice,
-            soilAdvice: care.soilAdvice,
-            careTips: care.careTips
-          }
-        }
-      });
-    } catch (err) {
-      return sendJSON(res, 500, { success: false, error: err.message });
     }
-  }
 
-  // API 3: Plant Info by Name
-  if (pathname === '/api/plant-info' && req.method === 'POST') {
-    try {
-      const body = await parseRequestBody(req);
-      const { plantName, lang = 'en' } = body;
-      const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
+    // 3. Plant Information by Name
+    if (pathname === '/api/plant-info' && req.method === 'POST') {
+      try {
+        const body = await parseRequestBody(req);
+        const { plantName, lang = 'en' } = body;
+        const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 
-      const languageNames = {
-        en: 'English',
-        ta: 'Tamil (தமிழ்)',
-        hi: 'Hindi (हिन्दी)',
-        ml: 'Malayalam (മലയാളം)',
-        kn: 'Kannada (ಕನ್ನಡ)'
-      };
-      const targetLangName = languageNames[lang] || 'English';
+        const languageNames = {
+          en: 'English',
+          ta: 'Tamil (தமிழ்)',
+          hi: 'Hindi (हिन्दी)',
+          ml: 'Malayalam (മലയാളം)',
+          kn: 'Kannada (ಕನ್ನಡ)'
+        };
+        const targetLangName = languageNames[lang] || 'English';
 
-      if (apiKey && plantName) {
-        try {
-          const prompt = `Provide botanical planting season and growing guidance for '${plantName}' in ${targetLangName}.
+        if (apiKey && plantName) {
+          try {
+            const prompt = `Provide botanical planting season and growing guidance for '${plantName}' in ${targetLangName}.
 Return JSON strictly in ${targetLangName} with format:
 {
   "plantName": "Plant name in ${targetLangName}",
@@ -563,40 +617,40 @@ Return JSON strictly in ${targetLangName} with format:
   "water": "Water requirements in ${targetLangName}",
   "growingTips": "Basic growing tips and soil requirements in ${targetLangName}"
 }`;
-          const geminiResult = await callGeminiAPI(apiKey, prompt);
-          return sendJSON(res, 200, { success: true, data: geminiResult });
-        } catch (apiErr) {
-          console.warn('Gemini plant info failed, using local database:', apiErr.message);
+            const geminiResult = await callGeminiAPI(apiKey, prompt);
+            return sendJSON(res, 200, { success: true, data: geminiResult });
+          } catch (apiErr) {
+            console.warn('Gemini plant info failed, using local database:', apiErr.message);
+          }
         }
+
+        const localData = getLocalPlantInfo(plantName, lang);
+        return sendJSON(res, 200, { success: true, data: localData });
+      } catch (err) {
+        return sendJSON(res, 500, { success: false, error: err.message });
       }
-
-      const localData = getLocalPlantInfo(plantName, lang);
-      return sendJSON(res, 200, { success: true, data: localData });
-    } catch (err) {
-      return sendJSON(res, 500, { success: false, error: err.message });
     }
-  }
 
-  // API 4: Chat Assistant
-  if (pathname === '/api/chat' && req.method === 'POST') {
-    try {
-      const body = await parseRequestBody(req);
-      const { message, context, chatHistory = [], lang = 'en' } = body;
-      const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
+    // 4. Conversational Chat Assistant
+    if (pathname === '/api/chat' && req.method === 'POST') {
+      try {
+        const body = await parseRequestBody(req);
+        const { message, context, chatHistory = [], lang = 'en' } = body;
+        const apiKey = req.headers['x-gemini-key'] || process.env.GEMINI_API_KEY;
 
-      const languageNames = {
-        en: 'English',
-        ta: 'Tamil (தமிழ்)',
-        hi: 'Hindi (हिन्दी)',
-        ml: 'Malayalam (മലയാളം)',
-        kn: 'Kannada (ಕನ್ನಡ)'
-      };
-      const targetLangName = languageNames[lang] || 'English';
+        const languageNames = {
+          en: 'English',
+          ta: 'Tamil (தமிழ்)',
+          hi: 'Hindi (हिन्दी)',
+          ml: 'Malayalam (മലയാളം)',
+          kn: 'Kannada (ಕನ್ನಡ)'
+        };
+        const targetLangName = languageNames[lang] || 'English';
 
-      if (apiKey && message) {
-        try {
-          const contextStr = context ? JSON.stringify(context) : 'No prior context';
-          const prompt = `You are PlantCare AI, a friendly, concise, and helpful botanical assistant.
+        if (apiKey && message) {
+          try {
+            const contextStr = context ? JSON.stringify(context) : 'No prior context';
+            const prompt = `You are PlantCare AI, a friendly, concise, and helpful botanical assistant.
 Current Plant Context: ${contextStr}
 User Question: "${message}"
 Respond conversationally, warmly, and clearly in ${targetLangName}.
@@ -604,67 +658,73 @@ Return JSON:
 {
   "reply": "Your helpful response text in ${targetLangName}"
 }`;
-          const geminiResult = await callGeminiAPI(apiKey, prompt);
-          return sendJSON(res, 200, { success: true, data: geminiResult });
-        } catch (apiErr) {
-          console.warn('Gemini chat failed, using local engine:', apiErr.message);
+            const geminiResult = await callGeminiAPI(apiKey, prompt);
+            return sendJSON(res, 200, { success: true, data: geminiResult });
+          } catch (apiErr) {
+            console.warn('Gemini chat failed, using local engine:', apiErr.message);
+          }
         }
+
+        const pName = context?.plantName || 'Plant';
+        const replies = {
+          en: `PlantCare AI: For ${pName}, maintain moderate soil moisture and avoid direct scorching noon sun. You can ask me specific questions about watering frequency, leaf spots, or organic compost!`,
+          ta: `PlantCare AI: உங்கள் ${pName} செடிக்கு மிதமான ஈரப்பதம் மற்றும் நல்ல காற்றோட்டத்தை வழங்கி வரவும். நீர்ப்பாசனம், உரம் அல்லது இலை பராமரிப்பு பற்றி மேலும் கேட்கலாம்!`,
+          hi: `PlantCare AI: अपने ${pName} के लिए सही धूप और पानी का संतुलन बनाए रखें। खाद, कटाई या कीटों से संबंधित कोई भी प्रश्न आप पूछ सकते हैं!`,
+          ml: `PlantCare AI: ${pName} ചെടിക്ക് ആവശ്യത്തിന് വെളിച്ചവും വെള്ളവും നൽകുക. പരിചരണ സംശയങ്ങൾ ചോദിക്കാവുന്നതാണ്!`,
+          kn: `PlantCare AI: ನಿಮ್ಮ ${pName} ಸಸ್ಯಕ್ಕೆ ಸೂಕ್ತ ಬೆಳಕು ಮತ್ತು ನೀರನ್ನು ನೀಡಿ. ಇತರ ಪ್ರಶ್ನೆಗಳಿದ್ದರೆ ಕೇಳಬಹುದು!`
+        };
+
+        return sendJSON(res, 200, {
+          success: true,
+          data: { reply: replies[lang] || replies.en }
+        });
+      } catch (err) {
+        return sendJSON(res, 500, { success: false, error: err.message });
       }
-
-      // Local chatbot responses
-      const pName = context?.plantName || 'Plant';
-      const replies = {
-        en: `PlantCare AI: For ${pName}, maintain moderate soil moisture and avoid direct scorching noon sun. You can ask me specific questions about watering frequency, leaf spots, or organic compost!`,
-        ta: `PlantCare AI: உங்கள் ${pName} செடிக்கு மிதமான ஈரப்பதம் மற்றும் நல்ல காற்றோட்டத்தை வழங்கி வரவும். நீர்ப்பாசனம், உரம் அல்லது இலை பராமரிப்பு பற்றி மேலும் கேட்கலாம்!`,
-        hi: `PlantCare AI: अपने ${pName} के लिए सही धूप और पानी का संतुलन बनाए रखें। खाद, कटाई या कीटों से संबंधित कोई भी प्रश्न आप पूछ सकते हैं!`,
-        ml: `PlantCare AI: ${pName} ചെടിക്ക് ആവശ്യത്തിന് വെളിച്ചവും വെള്ളവും നൽകുക. പരിചരണ സംശയങ്ങൾ ചോദിക്കാവുന്നതാണ്!`,
-        kn: `PlantCare AI: ನಿಮ್ಮ ${pName} ಸಸ್ಯಕ್ಕೆ ಸೂಕ್ತ ಬೆಳಕು ಮತ್ತು ನೀರನ್ನು ನೀಡಿ. ಇತರ ಪ್ರಶ್ನೆಗಳಿದ್ದರೆ ಕೇಳಬಹುದು!`
-      };
-
-      return sendJSON(res, 200, {
-        success: true,
-        data: { reply: replies[lang] || replies.en }
-      });
-    } catch (err) {
-      return sendJSON(res, 500, { success: false, error: err.message });
-    }
-  }
-
-  // Static File Serving
-  let safePath = path.normalize(pathname).replace(/^[\/]+/, '');
-  if (!safePath) safePath = 'index.html';
-  let filePath = path.join(PUBLIC_DIR, safePath);
-
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
-    filePath = path.join(filePath, 'index.html');
-  }
-
-  // SPA fallback
-  if (!fs.existsSync(filePath) && !path.extname(filePath)) {
-    filePath = path.join(PUBLIC_DIR, 'index.html');
-  }
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      const fallbackIndex = path.join(PUBLIC_DIR, 'index.html');
-      if (fs.existsSync(fallbackIndex)) {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        fs.createReadStream(fallbackIndex).pipe(res);
-      } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end('404 Not Found');
-      }
-      return;
     }
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
+    // ==========================================
+    // STATIC ASSET SERVING & SPA FALLBACK
+    // ==========================================
+    let safePath = path.normalize(pathname).replace(/^[\/]+/, '');
+    if (!safePath) safePath = 'index.html';
+    let filePath = path.join(PUBLIC_DIR, safePath);
+
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+      filePath = path.join(filePath, 'index.html');
+    }
+
+    if (!fs.existsSync(filePath) && !path.extname(filePath)) {
+      filePath = path.join(PUBLIC_DIR, 'index.html');
+    }
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        const fallbackIndex = path.join(PUBLIC_DIR, 'index.html');
+        if (fs.existsSync(fallbackIndex)) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          fs.createReadStream(fallbackIndex).pipe(res);
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('404 Not Found');
+        }
+        return;
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
   });
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`🌱 PlantCare AI Server is running on http://localhost:${PORT}`);
-  console.log(`🌿 Serving assets from: ${PUBLIC_DIR}`);
-});
+export const server = createAppServer();
+
+// Start standalone listener when executed directly
+if (process.argv[1] && process.argv[1].endsWith('server.js')) {
+  server.listen(PORT, () => {
+    console.log(`🌱 PlantCare AI Server is running on http://localhost:${PORT}`);
+    console.log(`🌿 Serving assets from: ${PUBLIC_DIR}`);
+  });
+}
