@@ -1,8 +1,27 @@
 /**
- * PlantCare AI - Comprehensive Botanical Database & Disease Encyclopaedia
- * Pre-seeded with 5-language native content for 30+ popular plants & 25+ diseases
+ * @file plants-data.js
+ * @description Comprehensive Botanical Knowledge Repository, Pre-seeded Species Profiles,
+ * Disease Pathologies, and Interactive Sample Presets for PlantCare AI.
+ *
+ * @module BotanicalDatabase
  */
 
+/**
+ * Interactive Sample Presets for instant 1-click testing across categories.
+ * Contains healthy specimens, common fungal infections, overwatering, and non-plant control.
+ *
+ * @type {Array<{
+ *   id: string,
+ *   name: string,
+ *   type: 'plant'|'non-plant',
+ *   image: string,
+ *   plantKey?: string,
+ *   status?: 'healthy'|'needs_attention'|'unhealthy',
+ *   diseaseKey?: string,
+ *   confidence?: number,
+ *   isPlant?: boolean
+ * }>}
+ */
 export const SAMPLE_PRESETS = [
   {
     id: "monstera-healthy",
@@ -52,6 +71,33 @@ export const SAMPLE_PRESETS = [
   }
 ];
 
+/**
+ * Botanical Database containing encyclopedic growth parameters,
+ * scientific Latin nomenclature, 5-language native labels, seasonal calendars,
+ * and pathology profiles.
+ *
+ * @type {Record<string, {
+ *   botanicalName: string,
+ *   names: Record<string, string>,
+ *   season: Record<string, {
+ *     season: string,
+ *     months: string,
+ *     climate: string,
+ *     sunlight: string,
+ *     water: string,
+ *     growingTips: string
+ *   }>,
+ *   care?: Record<string, Record<string, {
+ *     symptoms: string,
+ *     disease: string,
+ *     explanation: string,
+ *     wateringAdvice: string,
+ *     sunlightAdvice: string,
+ *     soilAdvice: string,
+ *     careTips: string
+ *   }>>
+ * }>}
+ */
 export const BOTANICAL_DATABASE = {
   monstera: {
     botanicalName: "Monstera deliciosa",
