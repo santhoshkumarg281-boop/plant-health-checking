@@ -1,11 +1,17 @@
 /**
- * PlantCare AI - Multilingual Localization Dictionary
- * Supported Languages:
- * - English (en)
- * - Tamil / தமிழ் (ta)
- * - Hindi / हिन्दी (hi)
- * - Malayalam / മലയാളം (ml)
- * - Kannada / ಕನ್ನಡ (kn)
+ * @file translations.js
+ * @description Comprehensive 5-Language Native Localization Dictionary for PlantCare AI.
+ * Covers 100% of User Interface typography, accessible aria-labels, diagnostic status badges,
+ * contextual chat prompts, dynamic error banners, and disclaimers.
+ *
+ * Supported Locales:
+ * - English (`en`): United Kingdom / International English
+ * - Tamil (`ta`): தமிழ் (India / Sri Lanka / Singapore)
+ * - Hindi (`hi`): हिन्दी (India)
+ * - Malayalam (`ml`): മലയാളം (India)
+ * - Kannada (`kn`): ಕನ್ನಡ (India)
+ *
+ * @module Translations
  */
 
 export const TRANSLATIONS = {
@@ -557,7 +563,7 @@ export const TRANSLATIONS = {
 
     // Non-Plant & Errors
     nonPlantTitle: "🌱 ಸಸ್ಯ ಪತ್ತೆಯಾಗಿಲ್ಲ",
-    nonPlantMsg: "ಈ ಚಿತ್ರದಲ್ಲಿ ಯಾವುದೇ ಸಸ್ಯ ಅಥವಾ ಎಲೆ ಪತ್ತೆಯಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಸಸ್ಯದ ಎಲೆ ಅಥವಾ ಕುಂಡದ ಸ್ಪಷ್ಟ ಫೋಟೋವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
+    nonPlantMsg: "ಈ ಚಿತ್ರದಲ್ಲಿ ಯಾವುದೇ ಸಸ್ಯ ಅಥವಾ ಎಲೆ ಪತ್ತೆಯಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಸಸ್ಯದ ಎಲೆಯ ಸ್ಪಷ್ಟ ಫೋಟೋವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ.",
     tryAgainBtn: "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
     errNoImage: "ದಯವಿಟ್ಟು ಮೊದಲು ಫೋಟೋವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
     errEmptyName: "ದಯವಿಟ್ಟು ಸಸ್ಯದ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.",
