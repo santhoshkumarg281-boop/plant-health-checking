@@ -1,7 +1,10 @@
 /**
- * PlantCare AI - Main Application Controller
- * Handles routing, view switching, multilingual state, image uploads,
- * camera capture, AI analysis, health report rendering, care plans, and contextual AI chat.
+ * @file app.js
+ * @description Main Frontend Controller for PlantCare AI.
+ * Coordinates View State Machine, Multilingual DOM Binding, Image Ingestion,
+ * Progressive AI Scan Animations, Health Report Rendering, and Contextual Chat.
+ *
+ * @module PlantCareApp
  */
 
 import { TRANSLATIONS } from './translations.js';
@@ -9,18 +12,38 @@ import { aiService } from './ai-service.js';
 import { SAMPLE_PRESETS } from './plants-data.js';
 
 class PlantCareApp {
+  /**
+   * Initializes the application state, caches DOM references,
+   * binds event listeners, and restores persisted language settings.
+   */
   constructor() {
-    this.currentLang = localStorage.getItem('plantcare_lang') || 'en';
+    /** @type {string} Active ISO language code */
+    this.currentLang = (typeof localStorage !== 'undefined' ? localStorage.getItem('plantcare_lang') : null) || 'en';
+    
+    /** @type {'home'|'scan'|'analyzing'|'report'|'plantNameSearch'|'plantNameResult'|'nonPlantError'} */
     this.currentView = 'home';
+    
+    /** @type {string|null} Base64 or URL data of the selected plant image */
     this.selectedImageData = null;
+    
+    /** @type {string|null} ID of preset sample if user picked a sample card */
     this.selectedSampleId = null;
+    
+    /** @type {Object|null} Cached health report analysis result */
     this.analysisResult = null;
+    
+    /** @type {Object|null} Cached seasonal plant guide result */
     this.plantInfoResult = null;
+    
+    /** @type {Array<{role: string, content: string}>} Chat conversation history */
     this.chatHistory = [];
 
     this.init();
   }
 
+  /**
+   * Bootstraps UI and loads sample plants
+   */
   init() {
     this.cacheDOM();
     this.bindEvents();
@@ -29,6 +52,9 @@ class PlantCareApp {
     this.initSamplePlants();
   }
 
+  /**
+   * Caches all critical DOM elements to avoid repetitive query lookups
+   */
   cacheDOM() {
     // Top Navigation & Header
     this.langSelect = document.getElementById('langSelect');
@@ -40,7 +66,7 @@ class PlantCareApp {
     this.saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
     this.clearApiKeyBtn = document.getElementById('clearApiKeyBtn');
 
-    // Views
+    // Views State Map
     this.views = {
       home: document.getElementById('view-home'),
       scan: document.getElementById('view-scan'),
@@ -51,7 +77,7 @@ class PlantCareApp {
       nonPlantError: document.getElementById('view-non-plant-error')
     };
 
-    // Home Actions
+    // Home Action Cards
     this.homeScanCard = document.getElementById('homeScanCard');
     this.homeNameCard = document.getElementById('homeNameCard');
 
@@ -116,7 +142,7 @@ class PlantCareApp {
     this.resAskAIBtn = document.getElementById('resAskAIBtn');
     this.resSearchAnotherBtn = document.getElementById('resSearchAnotherBtn');
 
-    // Non Plant Error View Elements
+    // Non-Plant Error Elements
     this.nonPlantTryAgainBtn = document.getElementById('nonPlantTryAgainBtn');
     this.nonPlantHomeBtn = document.getElementById('nonPlantHomeBtn');
     this.nonPlantMsg = document.getElementById('nonPlantMsg');
@@ -125,6 +151,9 @@ class PlantCareApp {
     this.toastContainer = document.getElementById('toastContainer');
   }
 
+  /**
+   * Binds UI click, change, and drag-and-drop event listeners
+   */
   bindEvents() {
     // Language Switcher
     if (this.langSelect) {
@@ -134,7 +163,7 @@ class PlantCareApp {
       });
     }
 
-    // Home Nav
+    // Home Navigation
     if (this.navHomeBtn) {
       this.navHomeBtn.addEventListener('click', () => this.switchView('home'));
     }
@@ -169,7 +198,7 @@ class PlantCareApp {
       });
     }
 
-    // Home Cards
+    // Home Action Cards
     if (this.homeScanCard) {
       this.homeScanCard.addEventListener('click', () => this.switchView('scan'));
     }
@@ -177,7 +206,7 @@ class PlantCareApp {
       this.homeNameCard.addEventListener('click', () => this.switchView('plantNameSearch'));
     }
 
-    // File Upload & Drag-Drop
+    // File Upload & Drag-Drop Ingestion
     if (this.browseBtn && this.fileInput) {
       this.browseBtn.addEventListener('click', () => this.fileInput.click());
       this.fileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files));
@@ -221,7 +250,7 @@ class PlantCareApp {
       this.startAnalyzeBtn.addEventListener('click', () => this.startAnalysis());
     }
 
-    // Report Actions
+    // Health Report Actions
     if (this.reportScanAnotherBtn) {
       this.reportScanAnotherBtn.addEventListener('click', () => {
         this.clearSelectedPhoto();
@@ -232,7 +261,7 @@ class PlantCareApp {
       this.reportBackHomeBtn.addEventListener('click', () => this.switchView('home'));
     }
 
-    // Chat Actions
+    // Contextual Chat Assistant
     if (this.chatSendBtn) {
       this.chatSendBtn.addEventListener('click', () => this.sendChatMessage());
     }
@@ -286,7 +315,6 @@ class PlantCareApp {
           };
           this.renderHealthReport(this.analysisResult);
           this.switchView('report');
-          // Smooth scroll to chat section
           const chatEl = document.getElementById('chat-section');
           if (chatEl) {
             chatEl.scrollIntoView({ behavior: 'smooth' });
@@ -295,7 +323,7 @@ class PlantCareApp {
       });
     }
 
-    // Non-Plant Actions
+    // Non-Plant Error Actions
     if (this.nonPlantTryAgainBtn) {
       this.nonPlantTryAgainBtn.addEventListener('click', () => {
         this.clearSelectedPhoto();
@@ -311,6 +339,10 @@ class PlantCareApp {
   // VIEW MANAGEMENT
   // ==========================================
 
+  /**
+   * Switches the active view card and handles scroll reset
+   * @param {string} viewName - Target view ID
+   */
   switchView(viewName) {
     this.currentView = viewName;
 
@@ -325,7 +357,6 @@ class PlantCareApp {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Update active nav styling
     if (this.navHomeBtn) {
       if (viewName === 'home') {
         this.navHomeBtn.classList.add('active');
@@ -339,18 +370,23 @@ class PlantCareApp {
   // MULTILINGUAL TRANSLATION SYSTEM
   // ==========================================
 
+  /**
+   * Sets active locale, persists to localStorage, and updates all DOM nodes
+   * @param {string} langCode - Language code ('en', 'ta', 'hi', 'ml', 'kn')
+   */
   setLanguage(langCode) {
     if (!TRANSLATIONS[langCode]) {
       langCode = 'en';
     }
     this.currentLang = langCode;
-    localStorage.setItem('plantcare_lang', langCode);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('plantcare_lang', langCode);
+    }
 
     if (this.langSelect) {
       this.langSelect.value = langCode;
     }
 
-    // Apply translations to all DOM elements with data-i18n
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
       if (TRANSLATIONS[langCode][key]) {
@@ -358,7 +394,6 @@ class PlantCareApp {
       }
     });
 
-    // Placeholders
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
       const key = el.getAttribute('data-i18n-placeholder');
       if (TRANSLATIONS[langCode][key]) {
@@ -366,11 +401,9 @@ class PlantCareApp {
       }
     });
 
-    // Re-render dynamic active components
     this.renderSuggestedQuestions();
     this.renderPopularPlantChips();
 
-    // If report or plant info is currently rendered, refresh localized content
     if (this.analysisResult && this.currentView === 'report') {
       this.renderHealthReport(this.analysisResult);
     }
@@ -379,6 +412,11 @@ class PlantCareApp {
     }
   }
 
+  /**
+   * Translates a single dictionary key
+   * @param {string} key - Dictionary key
+   * @returns {string} Localized string
+   */
   t(key) {
     const dict = TRANSLATIONS[this.currentLang] || TRANSLATIONS.en;
     return dict[key] || TRANSLATIONS.en[key] || key;
@@ -388,6 +426,9 @@ class PlantCareApp {
   // SAMPLE PRESETS & PLANT CHIPS
   // ==========================================
 
+  /**
+   * Renders the interactive 1-click sample cards on the Scan view
+   */
   initSamplePlants() {
     if (!this.sampleGrid) return;
     this.sampleGrid.innerHTML = '';
@@ -415,6 +456,10 @@ class PlantCareApp {
     });
   }
 
+  /**
+   * Selects a sample preset for rapid testing
+   * @param {Object} sample - Preset definition
+   */
   selectSample(sample) {
     this.selectedSampleId = sample.id;
     this.selectedImageData = sample.image;
@@ -422,6 +467,9 @@ class PlantCareApp {
     this.showToast(`Selected ${sample.name}`);
   }
 
+  /**
+   * Renders popular plant chips for quick botanical search
+   */
   renderPopularPlantChips() {
     if (!this.popularChipsContainer) return;
     this.popularChipsContainer.innerHTML = '';
@@ -454,6 +502,10 @@ class PlantCareApp {
   // IMAGE SELECTION & PREVIEW
   // ==========================================
 
+  /**
+   * Validates and reads selected image files via FileReader
+   * @param {FileList} files - Uploaded files
+   */
   handleFileSelect(files) {
     if (!files || files.length === 0) return;
 
@@ -472,6 +524,10 @@ class PlantCareApp {
     reader.readAsDataURL(file);
   }
 
+  /**
+   * Displays the image preview box
+   * @param {string} src - Image source URI
+   */
   showImagePreview(src) {
     if (this.previewImg && this.previewContainer) {
       this.previewImg.src = src;
@@ -483,6 +539,9 @@ class PlantCareApp {
     }
   }
 
+  /**
+   * Resets the photo state
+   */
   clearSelectedPhoto() {
     this.selectedImageData = null;
     this.selectedSampleId = null;
@@ -497,6 +556,9 @@ class PlantCareApp {
   // SCAN & AI ANALYSIS
   // ==========================================
 
+  /**
+   * Initiates plant vision examination and drives the scanning progress animation
+   */
   async startAnalysis() {
     if (!this.selectedImageData) {
       this.showToast(this.t('errNoImage'), 'error');
@@ -513,10 +575,8 @@ class PlantCareApp {
         lang: this.currentLang
       });
 
-      // Artificial short delay to allow beautiful scan animations to complete
       setTimeout(() => {
         if (!result || result.isPlant === false) {
-          // Non-plant detected
           if (this.nonPlantMsg) {
             this.nonPlantMsg.textContent = result?.message || this.t('nonPlantMsg');
           }
@@ -537,6 +597,9 @@ class PlantCareApp {
     }
   }
 
+  /**
+   * Drives the multi-phase animated scanning progress bar
+   */
   animateScanProgress() {
     if (!this.scanProgressBar || !this.scanStepText) return;
 
@@ -562,15 +625,17 @@ class PlantCareApp {
   // RENDER HEALTH REPORT & CARE PLAN
   // ==========================================
 
+  /**
+   * Renders the comprehensive Plant Health Report and Care Plan
+   * @param {Object} data - Diagnostic result payload
+   */
   renderHealthReport(data) {
     if (!data) return;
 
-    // Image
     if (this.reportPlantImg && this.selectedImageData) {
       this.reportPlantImg.src = this.selectedImageData;
     }
 
-    // Name & Botanical Classification
     if (this.reportPlantName) {
       this.reportPlantName.textContent = data.plantName || 'Unknown Plant';
     }
@@ -578,7 +643,6 @@ class PlantCareApp {
       this.reportBotanicalName.textContent = data.botanicalName ? `(${data.botanicalName})` : '';
     }
 
-    // Health Status Badge
     if (this.reportHealthBadge) {
       this.reportHealthBadge.className = 'status-pill';
       if (data.status === 'healthy') {
@@ -593,13 +657,11 @@ class PlantCareApp {
       }
     }
 
-    // Confidence Score
     if (this.reportConfidenceBadge) {
       const score = data.confidence || 92;
       this.reportConfidenceBadge.innerHTML = `📊 ${this.t('confidenceLabel')}: <strong>${score}%</strong>`;
     }
 
-    // Symptoms, Disease, Explanation
     if (this.reportSymptoms) {
       this.reportSymptoms.textContent = data.symptoms || 'None observed.';
     }
@@ -613,14 +675,12 @@ class PlantCareApp {
       this.reportDisclaimer.textContent = this.t('disclaimer');
     }
 
-    // Personalized Care Plan
     const care = data.carePlan || {};
     if (this.careWatering) this.careWatering.textContent = care.wateringAdvice || 'Water when topsoil dries.';
     if (this.careSunlight) this.careSunlight.textContent = care.sunlightAdvice || 'Bright indirect light.';
     if (this.careSoil) this.careSoil.textContent = care.soilAdvice || 'Well-draining rich potting soil.';
     if (this.careTips) this.careTips.textContent = care.careTips || 'Prune dead leaves regularly.';
 
-    // Setup Chat Context
     this.setupChatSession(data);
   }
 
@@ -628,11 +688,14 @@ class PlantCareApp {
   // ASK PLANTCARE AI (CONTEXTUAL CHAT)
   // ==========================================
 
+  /**
+   * Sets up contextual chat session based on analyzed plant condition
+   * @param {Object} reportData - Diagnostic data
+   */
   setupChatSession(reportData) {
     this.chatHistory = [];
     if (this.chatMessages) {
       this.chatMessages.innerHTML = '';
-      // Welcome assistant message
       const welcomeMsg = this.generateWelcomeChatMessage(reportData);
       this.appendChatMessage('assistant', welcomeMsg);
     }
@@ -644,6 +707,11 @@ class PlantCareApp {
     this.renderSuggestedQuestions();
   }
 
+  /**
+   * Generates localized welcome greeting
+   * @param {Object} data - Plant data
+   * @returns {string} Localized greeting
+   */
   generateWelcomeChatMessage(data) {
     const pName = data.plantName || 'Plant';
     const welcomes = {
@@ -656,6 +724,9 @@ class PlantCareApp {
     return welcomes[this.currentLang] || welcomes.en;
   }
 
+  /**
+   * Renders localized suggested prompt chips
+   */
   renderSuggestedQuestions() {
     if (!this.suggestedQuestionsContainer) return;
     this.suggestedQuestionsContainer.innerHTML = '';
@@ -682,6 +753,9 @@ class PlantCareApp {
     });
   }
 
+  /**
+   * Sends user message to AI assistant and handles typing indicator
+   */
   async sendChatMessage() {
     if (!this.chatInput) return;
     const text = (this.chatInput.value || '').trim();
@@ -690,11 +764,9 @@ class PlantCareApp {
       return;
     }
 
-    // Append user message
     this.appendChatMessage('user', text);
     this.chatInput.value = '';
 
-    // Show typing indicator
     const typingId = this.showTypingIndicator();
 
     try {
@@ -714,6 +786,11 @@ class PlantCareApp {
     }
   }
 
+  /**
+   * Appends a message bubble to the chat container
+   * @param {'user'|'assistant'} role - Author role
+   * @param {string} content - Message text
+   */
   appendChatMessage(role, content) {
     if (!this.chatMessages) return;
 
@@ -735,6 +812,10 @@ class PlantCareApp {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
   }
 
+  /**
+   * Shows the animated typing dots indicator
+   * @returns {string} DOM ID of the indicator
+   */
   showTypingIndicator() {
     if (!this.chatMessages) return null;
     const id = 'typing-' + Date.now();
@@ -752,12 +833,21 @@ class PlantCareApp {
     return id;
   }
 
+  /**
+   * Removes typing indicator
+   * @param {string} id - Indicator ID
+   */
   removeTypingIndicator(id) {
     if (!id) return;
     const el = document.getElementById(id);
     if (el) el.remove();
   }
 
+  /**
+   * Safe lightweight markdown formatter for bold, italics, and linebreaks
+   * @param {string} text - Raw text
+   * @returns {string} Formatted HTML
+   */
   formatChatMarkdown(text) {
     if (!text) return '';
     return text
@@ -770,6 +860,10 @@ class PlantCareApp {
   // ENTER YOUR PLANT NAME & SEASONAL GUIDE
   // ==========================================
 
+  /**
+   * Searches botanical information and planting season for a plant name
+   * @param {string} [overrideName] - Optional name parameter
+   */
   async searchPlantByName(overrideName) {
     const name = overrideName || (this.plantNameInput ? this.plantNameInput.value.trim() : '');
     if (!name) {
@@ -788,6 +882,10 @@ class PlantCareApp {
     }
   }
 
+  /**
+   * Renders the Seasonal Planting Guide card
+   * @param {Object} data - Plant information result
+   */
   renderPlantInfo(data) {
     if (!data) return;
 
@@ -805,6 +903,11 @@ class PlantCareApp {
   // TOAST NOTIFICATIONS
   // ==========================================
 
+  /**
+   * Displays temporary toast notification
+   * @param {string} message - Notification text
+   * @param {'info'|'error'} type - Notification style
+   */
   showToast(message, type = 'info') {
     if (!this.toastContainer) return;
 
@@ -825,6 +928,8 @@ class PlantCareApp {
 }
 
 // Instantiate app on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  window.plantCareApp = new PlantCareApp();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.plantCareApp = new PlantCareApp();
+  });
+}
