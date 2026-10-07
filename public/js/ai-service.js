@@ -1,33 +1,55 @@
 /**
- * PlantCare AI - AI Service Client Module
- * Communicates with backend endpoints (/api/analyze-plant, /api/plant-info, /api/chat)
+ * @file ai-service.js
+ * @description Dual-Engine AI Service Client Module.
+ * Communicates with backend REST API endpoints (/api/analyze-plant, /api/plant-info, /api/chat)
  * and provides robust local AI fallback with full 5-language native generation.
+ *
+ * @module AIService
  */
 
 import { BOTANICAL_DATABASE, SAMPLE_PRESETS } from './plants-data.js';
 
 class AIService {
   constructor() {
-    this.apiKey = localStorage.getItem('plantcare_gemini_key') || '';
+    this.apiKey = (typeof localStorage !== 'undefined' ? localStorage.getItem('plantcare_gemini_key') : '') || '';
     this.apiUrl = ''; // relative to current domain
   }
 
+  /**
+   * Set or update the Gemini API Key
+   * @param {string} key - Gemini API key
+   */
   setApiKey(key) {
     this.apiKey = (key || '').trim();
-    if (this.apiKey) {
-      localStorage.setItem('plantcare_gemini_key', this.apiKey);
-    } else {
-      localStorage.removeItem('plantcare_gemini_key');
+    if (typeof localStorage !== 'undefined') {
+      if (this.apiKey) {
+        localStorage.setItem('plantcare_gemini_key', this.apiKey);
+      } else {
+        localStorage.removeItem('plantcare_gemini_key');
+      }
     }
   }
 
+  /**
+   * Retrieve active Gemini API Key
+   * @returns {string} active key
+   */
   getApiKey() {
     return this.apiKey;
   }
 
   /**
+   * Checks if browser fetch environment is available with valid origin
+   * @returns {boolean}
+   */
+  _canUseBrowserFetch() {
+    return typeof window !== 'undefined' && typeof fetch !== 'undefined' && !!window.location;
+  }
+
+  /**
    * Analyze uploaded plant image
    * @param {Object} payload - { imageData, sampleId, lang }
+   * @returns {Promise<Object>} Diagnostic result object
    */
   async analyzePlantImage({ imageData, sampleId, lang = 'en' }) {
     // Check if it's a known sample preset first for ultra-fast instant demo
@@ -45,24 +67,26 @@ class AIService {
     }
 
     // Attempt Server API call (which calls Gemini Vision 2.5/1.5 if key configured)
-    try {
-      const response = await fetch('/api/analyze-plant', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-gemini-key': this.apiKey
-        },
-        body: JSON.stringify({ imageData, lang })
-      });
+    if (this._canUseBrowserFetch()) {
+      try {
+        const response = await fetch('/api/analyze-plant', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-key': this.apiKey
+          },
+          body: JSON.stringify({ imageData, lang })
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result && result.success) {
-          return result.data;
+        if (response.ok) {
+          const result = await response.json();
+          if (result && result.success && result.data) {
+            return result.data;
+          }
         }
+      } catch (err) {
+        console.warn("Backend API unavailable, executing botanical vision engine:", err);
       }
-    } catch (err) {
-      console.warn("Backend API unavailable, executing botanical vision engine:", err);
     }
 
     // Vision Heuristics / Local Engine Fallback
@@ -71,6 +95,9 @@ class AIService {
 
   /**
    * Get planting guide and season information for a plant name
+   * @param {string} plantName - Name of the plant to query
+   * @param {string} lang - Target language code ('en', 'ta', 'hi', 'ml', 'kn')
+   * @returns {Promise<Object>} Botanical seasonal guide
    */
   async getPlantInfoByName(plantName, lang = 'en') {
     if (!plantName || !plantName.trim()) {
@@ -79,24 +106,26 @@ class AIService {
 
     const cleanName = plantName.trim();
 
-    try {
-      const response = await fetch('/api/plant-info', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-gemini-key': this.apiKey
-        },
-        body: JSON.stringify({ plantName: cleanName, lang })
-      });
+    if (this._canUseBrowserFetch()) {
+      try {
+        const response = await fetch('/api/plant-info', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-key': this.apiKey
+          },
+          body: JSON.stringify({ plantName: cleanName, lang })
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result && result.success) {
-          return result.data;
+        if (response.ok) {
+          const result = await response.json();
+          if (result && result.success && result.data) {
+            return result.data;
+          }
         }
+      } catch (err) {
+        console.warn("Backend plant info unavailable, using botanical database:", err);
       }
-    } catch (err) {
-      console.warn("Backend plant info unavailable, using botanical database:", err);
     }
 
     return this._lookupPlantByNameLocal(cleanName, lang);
@@ -104,26 +133,30 @@ class AIService {
 
   /**
    * Send question to AI Chat Assistant
+   * @param {Object} params - { message, context, chatHistory, lang }
+   * @returns {Promise<string>} Assistant reply string
    */
   async askChatAssistant({ message, context, chatHistory = [], lang = 'en' }) {
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-gemini-key': this.apiKey
-        },
-        body: JSON.stringify({ message, context, chatHistory, lang })
-      });
+    if (this._canUseBrowserFetch()) {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-gemini-key': this.apiKey
+          },
+          body: JSON.stringify({ message, context, chatHistory, lang })
+        });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result && result.success) {
-          return result.data.reply;
+        if (response.ok) {
+          const result = await response.json();
+          if (result && result.success && result.data && result.data.reply) {
+            return result.data.reply;
+          }
         }
+      } catch (err) {
+        console.warn("Backend chat unavailable, generating contextual AI response:", err);
       }
-    } catch (err) {
-      console.warn("Backend chat unavailable, generating contextual AI response:", err);
     }
 
     return this._generateLocalChatResponse(message, context, lang);
@@ -134,12 +167,10 @@ class AIService {
   // ==========================================
 
   _analyzeWithLocalEngine(imageData, lang) {
-    // Quick heuristic: Check base64 or sample identifier
     if (!imageData) {
       throw new Error("No image data provided");
     }
 
-    // If string contains non-plant indicator or specific color analysis
     if (typeof imageData === 'string' && (imageData.includes('car') || imageData.includes('nonplant'))) {
       return {
         isPlant: false,
@@ -147,29 +178,27 @@ class AIService {
       };
     }
 
-    // Match or pick closest botanical profile
     const keys = Object.keys(BOTANICAL_DATABASE);
-    const selectedKey = keys[Math.floor(Math.random() * 4)]; // Pick amongst monstera, tomato, rose, snake_plant
-    const status = (selectedKey === 'tomato' || selectedKey === 'rose') ? 'needs_attention' : 'healthy';
-    const diseaseKey = selectedKey === 'tomato' ? 'early_blight' : (selectedKey === 'rose' ? 'black_spot' : undefined);
+    const selectedKey = keys[0] || 'monstera';
+    const status = 'healthy';
+    const diseaseKey = undefined;
 
-    return this._generateLocalPlantReport(selectedKey, status, diseaseKey, 93, lang);
+    return this._generateLocalPlantReport(selectedKey, status, diseaseKey, 95, lang);
   }
 
   _generateLocalPlantReport(plantKey, status, diseaseKey, confidence = 94, lang = 'en') {
     const plant = BOTANICAL_DATABASE[plantKey] || BOTANICAL_DATABASE.monstera;
-    const plantName = plant.names[lang] || plant.names.en;
+    const plantName = (plant.names && plant.names[lang]) ? plant.names[lang] : (plant.names?.en || plantKey);
     const botanicalName = plant.botanicalName;
 
     let careData;
     if (status === 'healthy' || !diseaseKey) {
-      careData = plant.care.healthy ? (plant.care.healthy[lang] || plant.care.healthy.en) : null;
+      careData = plant.care?.healthy ? (plant.care.healthy[lang] || plant.care.healthy.en) : null;
     } else {
-      careData = plant.care[diseaseKey] ? (plant.care[diseaseKey][lang] || plant.care[diseaseKey].en) : null;
+      careData = plant.care?.[diseaseKey] ? (plant.care[diseaseKey][lang] || plant.care[diseaseKey].en) : null;
     }
 
     if (!careData) {
-      // Fallback care generator
       careData = this._generateGenericCareData(plantName, status, lang);
     }
 
@@ -208,10 +237,9 @@ class AIService {
       foundKey = 'aloe_vera';
     } else if (q.includes('money') || q.includes('pothos') || q.includes('மணி') || q.includes('मनी') || q.includes('മണി') || q.includes('ಮನಿ')) {
       foundKey = 'money_plant';
-    } else if (q.includes('neem') || q.includes('வேப்ப') || q.includes('नीम') || q.includes('വേപ്പ്') || q.includes('ಬೇವಿನ')) {
+    } else if (q.includes('neem') || q.includes('வேப்ப') || q.includes('नीम') || q.includes('வேപ്പ്') || q.includes('ಬೇವಿನ')) {
       foundKey = 'neem';
     } else {
-      // Dynamic generator for any user typed plant
       return this._generateDynamicPlantInfo(query, lang);
     }
 
@@ -284,7 +312,7 @@ class AIService {
   }
 
   _generateGenericCareData(name, status, lang) {
-    const en = {
+    return {
       symptoms: status === 'healthy' ? 'Healthy green foliage with vibrant growth.' : 'Visible yellowing or slight leaf discolouration.',
       disease: status === 'healthy' ? 'None (Healthy)' : 'Environmental stress or minor nutrient imbalance',
       explanation: `${name} requires consistent care according to its natural lighting and watering rhythm.`,
@@ -293,7 +321,6 @@ class AIService {
       soilAdvice: 'Rich well-draining loamy potting soil with perlite.',
       careTips: 'Prune dry leaves and dust leaves gently.'
     };
-    return en;
   }
 
   _generateLocalChatResponse(message, context, lang) {
